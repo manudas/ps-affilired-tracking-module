@@ -1,17 +1,13 @@
 <?php
 /**
-* 2015 emotionLoop
+* 2017 Manuel José Pulgar Anguita
 *
-* NOTE
-* You are free edit and play around with the module.
-* Please visit contentbox.org for more information.
-*
-*  @author    Miguel Costa for emotionLoop
-*  @copyright emotionLoop
-*  @version   1.1.1
+*  @author    Manuel José Pulgar Anguita for Affilired SL
+*  @copyright Affilired
+*  @version   0.1
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
-*  http://emotionloop.com
-*  http://contentbox.org/
+*  http://affilired.com
+*  http://spindok.com
 */
 
 if (!defined( '_PS_VERSION_' ))
@@ -24,12 +20,13 @@ class CONTENTBOX extends Module
 	public function __construct()
 	{
 		$this->name = 'contentbox';
-		$this->description = 'Place your content everywhere!';
+		$this->description = 'We config for you our tracking system in your store!';
 		$this->tab = 'front_office_features';
-		$this->version = '1.1.1';
-		$this->author = 'emotionLoop';
+		$this->version = '0.1';
+		$this->author = 'Manuel José Pulgar Anguita';
 		$this->need_instance = 0;
-		$this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.6');
+		// $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.6');
+		$this->ps_versions_compliancy = array('min' => '1.5');
 		$this->monolanguage_content = 'Contentbox_MONOLANGUAGE';
 		$this->text_editor_content = 'Contentbox_TEXTEDITOR';
 		$this->content_wrapper = 'Contentbox_CONTENTWRAPPER';

@@ -1,6 +1,6 @@
 /**
-*  @author    Miguel Costa for emotionLoop
-*  @copyright emotionLoop
+*  @author    Manuel José Pulgar Anguita for Affilired
+*  @copyright Affilired
 */
 jQuery(document).ready(function(){
 	$(".fileDelete").on( "click", function(){
