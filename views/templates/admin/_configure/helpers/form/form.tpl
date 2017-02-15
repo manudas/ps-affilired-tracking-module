@@ -18,8 +18,8 @@
 
                     <div class="top-module-sub-title">{$input.moduleDescription|escape:html}</div>
 
-                    <div class="top-module-my-name"><a href="http://contentbox.org/?v={$input.moduleVersion|escape:html}">contentBox {$input.moduleVersion|escape:html}</a></div>
-                    <div class="">by <a href="http://emotionloop.com/?contentbox">emotionLoop</a></div>
+                    <div class="top-module-my-name"><a href="http://contentbox.org/?v={$input.moduleVersion|escape:html}">Affilired Tracking {$input.moduleVersion|escape:html}</a></div>
+                    <div class="">by <a href="http://www.affilired.com">Affilired</a></div>
                 </div>
             </div>
            
@@ -48,6 +48,8 @@
                     {/foreach}
                 </select>                
             </div>
+{*
+
             {if !$input.monolanguage }
             <div class="col-md-4">
                 <span><b>Language:</b></span>
@@ -64,13 +66,14 @@
                 </select>                
             </div>
             {/if}
+*}
             <div class="col-md-3">
                 <div >&nbsp;</div>
                 <input type="submit" value="Select" class="btn btn-primary">
                 <input type="hidden" name="ignore_changes" id="ignore_changes" value="">
             </div>
         </div>
-    {elseif $input.type == 'files_area' }
+    {*elseif $input.type == 'files_area' }
         <div>
             {if !empty( $input.files ) }
                 {foreach $input.files as $pos=>$file}
@@ -107,7 +110,7 @@
             {/if}
         </div>
 
-    {else}
+    {else*}
         {$smarty.block.parent}
     {/if}
 

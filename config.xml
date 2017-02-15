@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <module>
-	<name>contentbox</name>
+	<name>affilired</name>
 	<displayName><![CDATA[Affilired Tracking]]></displayName>
 	<version><![CDATA[0.1]]></version>
 	<description><![CDATA[Place the Affilired tracking code into your store easily!]]></description>

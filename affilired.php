@@ -19,7 +19,7 @@ class Affilired extends Module
 {
 	public function __construct()
 	{
-		$this->name = 'contentbox';
+		$this->name = 'affilired';
 		$this->description = 'We config for you our tracking system in your store!';
 		$this->tab = 'front_office_features';
 		$this->version = '0.1';
@@ -99,7 +99,7 @@ class Affilired extends Module
 			return $this->genericHookMethod( $args[0] );
 
 	}
-
+/*
 	public function addFilesToTemplate($path = null)
 	{
 		$result = true;
@@ -130,6 +130,7 @@ class Affilired extends Module
 		}
 
 	}
+*/	
 	public function genericHookMethod()
 	{
 		$content_query = AffiliredModel::getContent( $this->selected_store_id /*, $this->selected_language_id */);
@@ -164,9 +165,10 @@ class Affilired extends Module
 
 	public function getContent()
 	{
+/*
 		if (!is_writable( $this->complete_content_files_location ))
 			$this->_html .= $this->displayError( 'FOLDER PERMISSIONS ERROR: <br/>writing access denied on '.$this->simple_content_files_location.' <br/> ' );
-
+*/
 		$this->processSubmit();
 		return $this->displayForm();
 	}
@@ -176,12 +178,14 @@ class Affilired extends Module
 		if (Tools::isSubmit('submit'.$this->name))
 		{
 			//remove file
+			/*
 			if (!$this->emptyTest( Tools::getValue('delete_file') ))
 			{
 				$tmp_file = strip_tags(Tools::getValue('delete_file'));
 				unlink($this->complete_content_files_location.$tmp_file);
 				$this->_html .= $this->displayConfirmation( 'File Deleted' );
 			}
+			*/
 
 			//if change shop or change language submit
 			if (!$this->emptyTest( Tools::getValue('ignore_changes') ))
@@ -230,7 +234,7 @@ class Affilired extends Module
 
 		$shops_list = $this->getShopsList();
 		$languages_list = $this->getLanguagesList();
-		$files_list = $this->getFiles();
+		// $files_list = $this->getFiles();
 		$fields_form = array();
 		$fields_form[]['form'] = array(
 				'input' => array(
@@ -243,7 +247,7 @@ class Affilired extends Module
 						'current_language_id' => $this->selected_language_id,
 						'monolanguage' => Configuration::get($this->monolanguage_content),
 						'label' => ';)',
-						'logoImg' => $this->_path.'img/contentbox_logo.png',
+						'logoImg' => $this->_path.'img/spindok_logo.png',
 						'moduleName' => $this->displayName,
 						'moduleDescription' => $this->description,
 						'moduleVersion' => $this->version,
@@ -464,11 +468,11 @@ class Affilired extends Module
 
 		$helper->fields_value['monolanguage'] = Configuration::get($this->monolanguage_content);
 		$helper->fields_value['use_editor'] = $use_text_editor;
-
+/*
 		$helper->fields_value['headerFiles[]'] = $this->processSelectFilesForMultiselect(
 																AffiliredModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id )
 																);
-
+*/
 		$helper->fields_value['use_content_wrapper'] = $content_wrapper;
 		$helper->fields_value['content_wrapper_class'] = $content_wrapper_class;
 		$helper->fields_value['content_wrapper_id'] = $content_wrapper_id;
@@ -545,6 +549,7 @@ class Affilired extends Module
 		return $shops_list;
 	}
 
+/*
 	private function getFiles()
 	{
 		$tmp_files_info = array();
@@ -563,7 +568,7 @@ class Affilired extends Module
 
 		return $tmp_files_info;
 	}
-
+*/
 	private function processFilesList($files_list, $join_by_extension = false)
 	{
 		if (!is_array( $files_list ))
@@ -705,13 +710,13 @@ class AffiliredModel extends ObjectModel
 		$sql = 'SELECT * FROM '._DB_PREFIX_.self::$definition['table'].' WHERE `id_store`="'.(int)$shop.'"';
 		return Db::getInstance()->getRow($sql);
 	}
-
+/*
 	public static function getFilesInUse($id_store = 1, $id_lang = 1)
 	{
 		$sql = 'SELECT * FROM `'._DB_PREFIX_.self::$definition['table'].'_files` where `id_store`='.(int)$id_store.' and `id_lang`='.(int)$id_lang;
 		return Db::getInstance()->getRow($sql);
 	}
-
+*/
 	public static function setFiles($files_list = null, $id_store = 1, $id_lang = null)
 	{
 		$files_list = Tools::jsonEncode( $files_list );
