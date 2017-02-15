@@ -15,7 +15,7 @@ if (!defined( '_PS_VERSION_' ))
 
 
 
-class CONTENTBOX extends Module
+class Affilired extends Module
 {
 	public function __construct()
 	{
@@ -25,44 +25,23 @@ class CONTENTBOX extends Module
 		$this->version = '0.1';
 		$this->author = 'Manuel José Pulgar Anguita';
 		$this->need_instance = 0;
-		// $this->ps_versions_compliancy = array('min' => '1.5', 'max' => '1.6');
+
 		$this->ps_versions_compliancy = array('min' => '1.5');
-		$this->monolanguage_content = 'Contentbox_MONOLANGUAGE';
-		$this->text_editor_content = 'Contentbox_TEXTEDITOR';
-		$this->content_wrapper = 'Contentbox_CONTENTWRAPPER';
-		$this->content_wrapper_class = 'Contentbox_CONTENTWRAPPER_CLASS';
-		$this->content_wrapper_id = 'Contentbox_CONTENTWRAPPER_ID';
+
 		$this->bootstrap = true;
-		$this->_html = '';
-		$this->complete_content_files_location = dirname(__FILE__).'/content/';
-		$this->simple_content_files_location = $this->_path.'content/';
-		$this->ignore_changes_content_changes = false;
 
 		parent::__construct();
 
-		$this->displayName = $this->l('contentBox');
-		$this->description = $this->l('Place your content everywhere!');
+		$this->displayName = $this->l('Affilired tracking code for Prestashop');
+		$this->description = $this->l('Place the Affilired tracking code into your store easily!');
 
 		$this->confirmUninstall = $this->l('Are you sure you want to uninstall?');
 
 		//store selection
-		$this->selected_store_id = (!$this->emptyTest( Tools::getValue('contentbox_shop_select') ) )
-								? (int)Tools::getValue('contentbox_shop_select')
+		$this->selected_store_id = (!$this->emptyTest( Tools::getValue('affilired_shop_select') ) )
+								? (int)Tools::getValue('affilired_shop_select')
 								: $this->context->shop->id;
-		//language selection
-		$posted_mono_language = (Tools::getValue('monolanguage') != false)? (int)Tools::getValue('monolanguage') : null;
 
-		if (Configuration::get( $this->monolanguage_content ) || !empty( $posted_mono_language ))
-			$this->selected_language_id = (int)Configuration::get('PS_LANG_DEFAULT');
-		else
-		{
-			$this->selected_language_id = ( !$this->emptyTest( Tools::getValue('contentbox_language_select') ))
-									? (int)Tools::getValue('contentbox_language_select')
-									: $this->context->language->id;
-		}
-
-		if (Tools::getValue('contentbox_language_select') != false && $this->selected_language_id != Tools::getValue('contentbox_language_select'))
-			$this->ignore_changes_content_changes = true;
 	}
 
 	public function install()
@@ -70,10 +49,10 @@ class CONTENTBOX extends Module
 		if (Shop::isFeatureActive())
 			Shop::setContext(Shop::CONTEXT_ALL);
 
-		if (!parent::install() || !$this->registerHook('header') || !$this->registerHook('footer') || !CONTENTBOXModel::createTables())
+		if (!parent::install() || /*!$this->registerHook('header') || */ !$this->registerHook('footer') || !AffiliredModel::createTables())
 			return false;
 
-		Configuration::updateValue($this->monolanguage_content, 0);
+		// Configuration::updateValue($this->monolanguage_content, 0);
 		Configuration::updateValue($this->text_editor_content, 1);
 
 		Configuration::updateValue($this->content_wrapper, 0);
@@ -89,10 +68,10 @@ class CONTENTBOX extends Module
 	{
 		$this->_clearCache('template.tpl');
 		if (!parent::uninstall()
-			|| !CONTENTBOXModel::DropTables())
+			|| !AffiliredModel::DropTables())
 		{
 
-			Configuration::deleteByName($this->monolanguage_content);
+			// Configuration::deleteByName($this->monolanguage_content);
 			Configuration::deleteByName($this->text_editor_content);
 
 			Configuration::deleteByName($this->content_wrapper);
@@ -104,6 +83,7 @@ class CONTENTBOX extends Module
 		return true;
 	}
 
+	/** Generic hook call funtion */
 	public function __call($method, $args)
 	{
 		//if method exists
@@ -124,7 +104,7 @@ class CONTENTBOX extends Module
 	{
 		$result = true;
 		//list the active files to add
-		$files_data = CONTENTBOXModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id );
+		$files_data = AffiliredModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id );
 		if (empty( $files_data ) || gettype( $files_data['files'] ) == null)
 			return $result;
 
@@ -152,7 +132,7 @@ class CONTENTBOX extends Module
 	}
 	public function genericHookMethod()
 	{
-		$content_query = CONTENTBOXModel::getContent( $this->selected_store_id, $this->selected_language_id );
+		$content_query = AffiliredModel::getContent( $this->selected_store_id /*, $this->selected_language_id */);
 		$pre_content = '';
 		$pos_content = '';
 
@@ -207,10 +187,6 @@ class CONTENTBOX extends Module
 			if (!$this->emptyTest( Tools::getValue('ignore_changes') ))
 				return true;
 
-			//upload file
-			if ($this->hasFile())
-				$this->processFileUpload();
-
 			//if the posted language different from the current language -> ignore content changes
 			if ((Tools::getValue('contentbox_language_select') != false && (int)Tools::getValue('contentbox_language_select') == $this->selected_language_id )
 				|| (Tools::getValue('contentbox_language_select') == false
@@ -218,14 +194,8 @@ class CONTENTBOX extends Module
 			{
 				//store the content
 				if (Tools::getValue('content_text') !== false && $this->ignore_changes_content_changes == false)
-					CONTENTBOXModel::setContent( Tools::getValue('content_text'), $this->selected_store_id, $this->selected_language_id );
+					AffiliredModel::setContent( Tools::getValue('content_text'), $this->selected_store_id, $this->selected_language_id );
 
-				//store the files to be used
-				if (Tools::getValue('headerFiles') !== false)
-					CONTENTBOXModel::setFiles(
-							$this->processFilesList( Tools::getValue('headerFiles'), true ),
-							$this->selected_store_id,
-							$this->selected_language_id );
 			}
 
 			//store the developer configurations
@@ -245,42 +215,6 @@ class CONTENTBOX extends Module
 				Configuration::updateValue($this->content_wrapper_id, Tools::getValue('content_wrapper_id'));
 
 		}
-	}
-
-	private function processFileUpload()
-	{
-		//test files folder permissions
-		if (!is_writable( $this->complete_content_files_location ))
-			return false;
-
-		if (file_exists($this->complete_content_files_location.$_FILES['upload_file']['name']))
-		{
-			$tmp_name = explode('.', $_FILES['upload_file']['name']);
-			$tmp_ext = end($tmp_name);
-			array_pop($tmp_name);
-			$tmp_name = implode('.', $tmp_name);
-			$tmp_new_img_name = $this->complete_content_files_location.$tmp_name;
-
-			$control_loop = false;
-			$tmp_i = 1;
-			while ($control_loop == false)
-			{
-				if (file_exists($tmp_new_img_name.'('.$tmp_i.').'.$tmp_ext ))
-					++ $tmp_i;
-				else
-				{
-					$_FILES['upload_file']['name'] = $tmp_name.'('.$tmp_i.').'.$tmp_ext;
-					$control_loop = true;
-				}
-			}
-		}
-
-		$move_result = move_uploaded_file($_FILES['upload_file']['tmp_name'], $this->complete_content_files_location.$_FILES['upload_file']['name']);
-
-		if (empty( $move_result ))
-			$this->_html .= $this->displayError( 'UPLOAD ERROR: <br/> There was an unknown error. Please try again.<br/> ' );
-		else
-			$this->_html .= $this->displayConfirmation( 'File Uploaded' );
 	}
 
 	public function displayForm()
@@ -522,7 +456,7 @@ class CONTENTBOX extends Module
 			)
 		);
 		// Load current value
-		$content_query = CONTENTBOXModel::getContent( $this->selected_store_id, $this->selected_language_id );
+		$content_query = AffiliredModel::getContent( $this->selected_store_id, $this->selected_language_id );
 
 		$content_field = ( !empty( $content_query ) )? $content_query['content_text'] : '';
 
@@ -532,7 +466,7 @@ class CONTENTBOX extends Module
 		$helper->fields_value['use_editor'] = $use_text_editor;
 
 		$helper->fields_value['headerFiles[]'] = $this->processSelectFilesForMultiselect(
-																CONTENTBOXModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id )
+																AffiliredModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id )
 																);
 
 		$helper->fields_value['use_content_wrapper'] = $content_wrapper;
@@ -705,11 +639,11 @@ class CONTENTBOX extends Module
 * The model in the same file because of the module generator
 */
 
-class CONTENTBOXModel extends ObjectModel
+class AffiliredModel extends ObjectModel
 {
 
 	public static $definition = array(
-		'table' => 'contentbox',
+		'table' => 'affilired',
 		'primary' => 'file_id',
 		'multishop' => true,
 		'multilang' => true,
@@ -724,14 +658,14 @@ class CONTENTBOXModel extends ObjectModel
 	public static function createTables()
 	{
 		//main table for the files
-		return ( CONTENTBOXModel::createFilesTable()
-				&& CONTENTBOXModel::createContentTable());
+		return ( /* AffiliredModel::createFilesTable()
+				&& */ AffiliredModel::createContentTable());
 	}
 
 	public static function dropTables()
 	{
+
 		$sql = 'DROP TABLE
-			`'._DB_PREFIX_.self::$definition['table'].'_files`,
 			`'._DB_PREFIX_.self::$definition['table'].'`
 		';
 		$result = Db::getInstance()->execute($sql);
@@ -740,23 +674,22 @@ class CONTENTBOXModel extends ObjectModel
 
 	public static function createContentTable()
 	{
+
 		$sql = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.self::$definition['table'].'`(
 			`content_id` int(10) unsigned NOT NULL auto_increment,
 			`content_text` text NOT NULL,
-			`id_lang` int(10) unsigned NOT NULL,
 			`id_store` int(10) unsigned NOT NULL default \'1\',
-			PRIMARY KEY (`content_id`),
-			UNIQUE KEY `id_lang_id_store` (`id_lang`,`id_store`)
+			PRIMARY KEY (`content_id`)
 			) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8';
 
 		return Db::getInstance()->execute($sql);
 	}
 
-	public static function setContent($content_text = null, $id_store = 1, $id_lang = null)
+	public static function setContent($content_text = null, $id_store = 1 /*, $id_lang = null*/)
 	{
 		//special thanks to MarkOG (http://www.prestashop.com/forums/user/817367-markog/)
 		$content_text = pSQL( $content_text, true );
-		$id_lang = (int)$id_lang;
+		// $id_lang = (int)$id_lang;
 		$id_store = (int)$id_store;
 		$sql = 'INSERT INTO `'._DB_PREFIX_.self::$definition['table'].'` (`content_text`,`id_lang`,`id_store`)
 					VALUES ("'.$content_text.'","'.$id_lang.'","'.$id_store.'")
@@ -766,25 +699,11 @@ class CONTENTBOXModel extends ObjectModel
 		return Db::getInstance()->execute( $sql );
 	}
 
-	public static function getContent($shop, $language)
+	public static function getContent($shop /*, $language*/)
 	{
-		$sql = 'SELECT * FROM '._DB_PREFIX_.self::$definition['table'].' WHERE `id_lang` = "'.(int)$language.'" and `id_store`="'.(int)$shop.'"';
+		// $sql = 'SELECT * FROM '._DB_PREFIX_.self::$definition['table'].' WHERE `id_lang` = "'.(int)$language.'" and `id_store`="'.(int)$shop.'"';
+		$sql = 'SELECT * FROM '._DB_PREFIX_.self::$definition['table'].' WHERE `id_store`="'.(int)$shop.'"';
 		return Db::getInstance()->getRow($sql);
-	}
-
-	public static function createFilesTable()
-	{
-		//file_type 0 =>css, 1=> js, 2=>html
-		$sql = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.self::$definition['table'].'_files`(
-			`id` int(10) unsigned NOT NULL auto_increment,
-			`id_store` int(10) unsigned NOT NULL ,
-			`id_lang` int(10) unsigned NOT NULL,
-			`files` text NOT NULL,
-			PRIMARY KEY (`id`),
-			UNIQUE KEY `id_lang_id_store` (`id_lang`,`id_store`)
-			) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8';
-
-		return Db::getInstance()->execute($sql);
 	}
 
 	public static function getFilesInUse($id_store = 1, $id_lang = 1)

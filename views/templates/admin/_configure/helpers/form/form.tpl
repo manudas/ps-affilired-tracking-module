@@ -1,6 +1,6 @@
 {*
-*  @author    Miguel Costa for emotionLoop
-*  @copyright emotionLoop
+*  @author    Manuel José Pulgar Anguita for Affilired
+*  @copyright Affilired
 *}
 
 {extends file="helpers/form/form.tpl"}
@@ -36,7 +36,7 @@
         <div class="row" style="background-color: transparent;" >
             <div class="col-md-4">
                 <span><b>Shop:</b></span>
-                <select id="contentbox_shop_select" name="contentbox_shop_select">
+                <select id="affilired_shop_select" name="affilired_shop_select">
                     {foreach $input.shops as $shop}
                         <option id="id_{$shop['id_shop']|escape}" value="{$shop['id_shop']|escape}"
                             {if ( $input.current_shop_id == $shop['id_shop'] )}
