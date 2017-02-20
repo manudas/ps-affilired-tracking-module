@@ -4,7 +4,7 @@
 *
 *  @author    Manuel José Pulgar Anguita for Affilired SL
 *  @copyright Affilired
-*  @version   0.1
+*  @version   0.3
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  http://affilired.com
 *  http://spindok.com
@@ -22,7 +22,7 @@ class Affilired extends Module
 		$this->name = 'affilired';
 		$this->description = 'We config for you our tracking system in your store!';
 		$this->tab = 'front_office_features';
-		$this->version = '0.1';
+		$this->version = '0.3';
 		$this->author = 'Manuel José Pulgar Anguita';
 		$this->need_instance = 0;
 
@@ -49,15 +49,10 @@ class Affilired extends Module
 		if (Shop::isFeatureActive())
 			Shop::setContext(Shop::CONTEXT_ALL);
 
-		if (!parent::install() || /*!$this->registerHook('header') || */ !$this->registerHook('footer') || !AffiliredModel::createTables())
+		if (!parent::install() || !$this->registerHook('footer') 
+								|| !$this->registerHook('OrderConfirmation') 
+								|| !AffiliredModel::createTables())
 			return false;
-
-		// Configuration::updateValue($this->monolanguage_content, 0);
-		Configuration::updateValue($this->text_editor_content, 1);
-
-		Configuration::updateValue($this->content_wrapper, 0);
-		Configuration::updateValue($this->content_wrapper_class, '');
-		Configuration::updateValue($this->content_wrapper_id, '');
 
 		$this->_clearCache('template.tpl');
 
@@ -70,14 +65,6 @@ class Affilired extends Module
 		if (!parent::uninstall()
 			|| !AffiliredModel::DropTables())
 		{
-
-			// Configuration::deleteByName($this->monolanguage_content);
-			Configuration::deleteByName($this->text_editor_content);
-
-			Configuration::deleteByName($this->content_wrapper);
-			Configuration::deleteByName($this->content_wrapper_class);
-			Configuration::deleteByName($this->content_wrapper_id);
-
 			return false;
 		}
 		return true;
@@ -90,85 +77,47 @@ class Affilired extends Module
 		if (function_exists($method))
 			return call_user_func_array($method, $args);
 
-		//if head hook: add the css and js files
-		if ($method == 'hookdisplayHeader')
-			return $this->hookHeader( $args[0] );
-
 		//check for a call to an hook
 		if (strpos($method, 'hook') !== false)
 			return $this->genericHookMethod( $args[0] );
 
 	}
-/*
-	public function addFilesToTemplate($path = null)
-	{
-		$result = true;
-		//list the active files to add
-		$files_data = AffiliredModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id );
-		if (empty( $files_data ) || gettype( $files_data['files'] ) == null)
-			return $result;
 
-		$files = Tools::jsonDecode( $files_data['files'] );
-
-		if (empty( $files ))
-			return $result;
-
-		if (empty( $path ))
-			$path = $this->simple_content_files_location;
-
-		foreach ($files as $file)
-		{
-			switch ($file->extension)
-			{
-				case 'js':
-					$this->context->controller->addJs($path.'/'.$file->name, 'all');
-				break;
-				case 'css':
-					$this->context->controller->addCss($path.'/'.$file->name, 'all');
-				break;
-			}
-		}
-
-	}
-*/	
 	public function genericHookMethod()
 	{
-		$content_query = AffiliredModel::getContent( $this->selected_store_id /*, $this->selected_language_id */);
-		$pre_content = '';
-		$pos_content = '';
+		$merchant_querry = AffiliredModel::getContent( $this->selected_store_id );
 
-		$content_wrapper = Configuration::get($this->content_wrapper);
+		$merchant_id = $merchant_querry['merchant_id'];
 
-		if (!empty( $content_wrapper ) && !is_numeric( $content_wrapper ))
-		{
-			$content_wrapper_class = Configuration::get($this->content_wrapper_class);
-			$content_wrapper_id = Configuration::get($this->content_wrapper_id);
-
-			$pre_content = '<'.$content_wrapper.' ';
-			$pre_content .= ( !empty( $content_wrapper_class ) )?' class="'.$content_wrapper_class.'" ' : '';
-			$pre_content .= ( !empty( $content_wrapper_id ) )?' id="'.$content_wrapper_id.'" ' : '';
-			$pre_content .= '>';
-			$pos_content = '</'.$content_wrapper.'>';
+		if (empty($merchant_id)) {
+			return false;
 		}
+		else {
 
-		$this->context->smarty->assign(
-				array( 'content' => $pre_content.$content_query['content_text'].$pos_content )
-			);
-		return $this->display(__FILE__, 'views/templates/front/template.tpl');
+			$current_page = $this -> context -> controller -> php_self;
 
+			if ($current_page == 'order-confirmation') { // the confirmation script is being launched
+				// we launch it in hookOrderConfirmation
+			}
+			else { // the master tag is launched
+				$this->context->smarty->assign(
+					array( 'merchant_id' =>  $merchant_id)
+				);
+				return $this->display(__FILE__, 'views/templates/front/masterTag.tpl');
+			}
+		}
 	}
 
-	public function hookHeader()
-	{
-		$this->addFilesToTemplate( $this->_path.'content/' );
+	public function hookOrderConfirmation($params) {
+		// TODO: launch confirmation script revising the prices witchout taxes
+		$order = $params['objOrder'];
+		// array with products with price, quantity (with taxes and without)
+		$products = $order->getProducts();
+		die(var_export($products, true));
 	}
 
 	public function getContent()
 	{
-/*
-		if (!is_writable( $this->complete_content_files_location ))
-			$this->_html .= $this->displayError( 'FOLDER PERMISSIONS ERROR: <br/>writing access denied on '.$this->simple_content_files_location.' <br/> ' );
-*/
 		$this->processSubmit();
 		return $this->displayForm();
 	}
@@ -177,82 +126,69 @@ class Affilired extends Module
 	{
 		if (Tools::isSubmit('submit'.$this->name))
 		{
-			//remove file
-			/*
-			if (!$this->emptyTest( Tools::getValue('delete_file') ))
-			{
-				$tmp_file = strip_tags(Tools::getValue('delete_file'));
-				unlink($this->complete_content_files_location.$tmp_file);
-				$this->_html .= $this->displayConfirmation( 'File Deleted' );
+			$ps_shop_list = $this->getShopsList();
+			foreach ($ps_shop_list as $shop) {
+				$current_merchant_id = Tools::getValue('merchant_id_'.$shop['id_shop']);
+				if (empty($current_merchant_id)) {
+					$affilired_merchant_collection = new PrestashopCollection('AffiliredModel');
+					$affilired_merchant_collection -> where ('id_store' , '=', "'".$shop['id_shop']."'");
+					$hydrated_collection = $affilired_merchant_collection -> getAll();
+					foreach ($hydrated_collection as $affilired_merchant) {
+						$aaffilired_merchant -> delete();
+					}
+				}
+				else {
+					AffiliredModel::setContent( $current_merchant_id, $shop['id_shop'] );
+				}
 			}
-			*/
-
-			//if change shop or change language submit
-			if (!$this->emptyTest( Tools::getValue('ignore_changes') ))
-				return true;
-
-			//if the posted language different from the current language -> ignore content changes
-			if ((Tools::getValue('contentbox_language_select') != false && (int)Tools::getValue('contentbox_language_select') == $this->selected_language_id )
-				|| (Tools::getValue('contentbox_language_select') == false
-				&& (int)Configuration::get('PS_LANG_DEFAULT') == $this->selected_language_id ))
-			{
-				//store the content
-				if (Tools::getValue('content_text') !== false && $this->ignore_changes_content_changes == false)
-					AffiliredModel::setContent( Tools::getValue('content_text'), $this->selected_store_id, $this->selected_language_id );
-
-			}
-
-			//store the developer configurations
-			if (Tools::getIsset( 'monolanguage' ))
-				Configuration::updateValue($this->monolanguage_content, (int)Tools::getValue('monolanguage'));
-
-			if (Tools::getIsset( 'use_editor' ))
-				Configuration::updateValue($this->text_editor_content, (int)Tools::getValue('use_editor'));
-
-			if (Tools::getIsset( 'use_content_wrapper' ))
-				Configuration::updateValue($this->content_wrapper, Tools::getValue('use_content_wrapper'));
-
-			if (Tools::getIsset( 'content_wrapper_class' ))
-				Configuration::updateValue($this->content_wrapper_class, Tools::getValue('content_wrapper_class'));
-
-			if (Tools::getIsset( 'content_wrapper_id' ))
-				Configuration::updateValue($this->content_wrapper_id, Tools::getValue('content_wrapper_id'));
 
 		}
 	}
 
 	public function displayForm()
 	{
-		$default_lang = (int)Configuration::get('PS_LANG_DEFAULT');
 
-		//use text editor
-		$use_text_editor = (int)Configuration::get($this->text_editor_content);
+		$ps_shop_list = $this->getShopsList();
+		$shops_list = array_merge (array( 0 => array ( 'id_shop' => 0, 'name' => $this -> l('All') )), $ps_shop_list);
 
-		$content_wrapper = Configuration::get($this->content_wrapper);
-		$content_wrapper_class = Configuration::get($this->content_wrapper_class);
-		$content_wrapper_id = Configuration::get($this->content_wrapper_id);
 
-		$shops_list = $this->getShopsList();
-		$languages_list = $this->getLanguagesList();
-		// $files_list = $this->getFiles();
+		if (!empty($ps_shop_list)){
+			$hidden_input_shop = array();
+			foreach ($ps_shop_list as $shop){
+				$hidden_input_shop[] = array (
+						'type' => 'hidden',
+						'name' => 'merchant_id_'.$shop['id_shop'],
+						'class' => 'hidden_merchant_id'
+				);
+			}
+		}
+
 		$fields_form = array();
+
+
+		$fields_form[]['form'] = array(
+			'input' => $hidden_input_shop);
+
+
 		$fields_form[]['form'] = array(
 				'input' => array(
 					array(
-						'name' => 'topform',
+						'name' => 'shopList',
 						'type' => 'topform',
 						'shops' => $shops_list,
-						'current_shop_id' => $this->selected_store_id,
-						'languages' => $languages_list,
-						'current_language_id' => $this->selected_language_id,
-						'monolanguage' => Configuration::get($this->monolanguage_content),
+						// 'current_shop_id' => $this->selected_store_id,
+						'current_shop_id' => 0,
+						'multiple' => true,
 						'label' => ';)',
 						'logoImg' => $this->_path.'img/spindok_logo.png',
 						'moduleName' => $this->displayName,
 						'moduleDescription' => $this->description,
 						'moduleVersion' => $this->version,
+						'desc' => $this->l('Please select above the stores .'),
+
 					),
 				),
+				
 			);
 		$fields_form[]['form'] = array(
 				'tinymce' => true,
@@ -261,186 +197,23 @@ class Affilired extends Module
 				),
 				'input' => array(
 					array(
-						'type' => 'textarea',
-						'name' => 'content_text',
-						'label' => $this->l("Module's Content"),
-						'cols' => 50,
-						'rows' => 20,
-						'class' => ( !empty( $use_text_editor ) )? 'rte' : '',
-						'autoload_rte' => ( !empty( $use_text_editor ) )? true :false,
+						'type' => 'text',
+						'name' => 'merchant_id',
+						'label' => $this->l("Your merchant ID in Affilired"),
 					),
-					array(
-						'name' => 'files_area',
-						'type' => 'files_area',
-						'label' => $this->l("Module's Files"),
-						'files' =>  $files_list,
-						'path' => $this->_path,
-						'imagesExtensions' => array( 'jpg','gif','png' ),
-					),
-					array(
-						'type' => 'file',
-						'name' => 'upload_file',
-						'path' => $this->_path,
-						'imagesExtensions' => array( 'jpg','gif','png' ),
-					),
-
 				),
 				'submit' => array(
 					'title' => $this->l('Save'),
 				),
 			);
 
-		$fields_form[]['form'] = array(
-				'legend' => array(
-					'title' => $this->l('Developer Configurations'),
-				),
-				'input' => array(
-					array(
-						'type' => 'select',
-						'name' => 'monolanguage',
-						'label' => $this->l('Use only the main language settings'),
-						'options' => array(
-							'query' => array(
-								array(
-									'value' => 0,
-									'text' => $this->l('No'),
-								),
-								array(
-									'value' => '1',
-									'text' => $this->l('Yes'),
-								),
-							),
-							'id' => 'value',
-							'name' => 'text'
-						)
-					),
-					array(
-						'type' => 'select',
-						'name' => 'use_editor',
-						'label' => $this->l('Use Text Editor'),
-						'options' => array(
-							'query' => array(
-								array(
-									'value' => 0,
-									'text' => $this->l('No'),
-								),
-								array(
-									'value' => '1',
-									'text' => $this->l('Yes'),
-								),
-							),
-							'id' => 'value',
-							'name' => 'text'
-						)
-					),
-					array(
-						'type' => 'select',
-						'name' => 'headerFiles[]',
-						'label' => $this->l('Load Files on HTML Header'),
-						'desc' => $this->l('Please select above the files to be used.'),
-						'multiple' => true,
-						'options' => array(
-							'query' => $this->filterFiles( $files_list ),
-							'id' => 'name',
-							'name' => 'name'
-						)
-					),
-					array(
-						'type' => 'select',
-						'name' => 'use_content_wrapper',
-						'label' => $this->l('Use a Content Wrapper'),
-						'options' => array(
-							'query' => array(
-								array(
-									'value' => 0,
-									'text' => $this->l('No'),
-								),
-								array(
-									'value' => 'div',
-									'text' => $this->l('<div>'),
-								),
-								array(
-									'value' => 'article',
-									'text' => $this->l('<article>'),
-								),
-								array(
-									'value' => 'blockquote',
-									'text' => $this->l('<blockquote>'),
-								),
-
-								array(
-									'value' => 'figure',
-									'text' => $this->l('<figure>'),
-								),
-								array(
-									'value' => 'footer',
-									'text' => $this->l('<footer>'),
-								),
-								array(
-									'value' => 'hgroup',
-									'text' => $this->l('<hgroup>'),
-								),
-								array(
-									'value' => 'main',
-									'text' => $this->l('<main>'),
-								),
-								array(
-									'value' => 'menu',
-									'text' => $this->l('<menu>'),
-								),
-								array(
-									'value' => 'nav',
-									'text' => $this->l('<nav>'),
-								),
-								array(
-									'value' => 'p',
-									'text' => $this->l('<p>'),
-								),
-								array(
-									'value' => 'section',
-									'text' => $this->l('<section>'),
-								),
-								array(
-									'value' => 'span',
-									'text' => $this->l('<span>'),
-								),
-							),
-							'id' => 'value',
-							'name' => 'text'
-						)
-					),
-					array(
-						'type' => 'text',
-						'class' => 'content_wrapper_class',
-						'name' => 'content_wrapper_class',
-						'disabled' => ( (empty( $content_wrapper ))? true:false ),
-						'label' => $this->l('Content Wrapper Class'),
-						'desc' => $this->l('Place the Content Wrapper .class here.'),
-					),
-					array(
-						'type' => 'text',
-						'class' => 'content_wrapper_id',
-						'name' => 'content_wrapper_id',
-						'disabled' => ( (empty( $content_wrapper ))? true:false ),
-						'label' => $this->l('Content Wrapper ID'),
-						'desc' => $this->l('Place the Content Wrapper #id here.'),
-					),
-				),
-				'submit' => array(
-					'title' => $this->l('Save'),
-				),
-			);
 		$helper = new HelperForm();
 
-		// Module, t    oken and currentIndex
+		// Module, token and currentIndex
 		$helper->module = $this;
 		$helper->name_controller = $this->name;
 		$helper->token = Tools::getAdminTokenLite('AdminModules');
 		$helper->currentIndex = AdminController::$currentIndex.'&configure='.$this->name;
-
-		// Language
-		$helper->default_form_language = $default_lang;
-		$helper->allow_employee_form_lang = $default_lang;
 
 		// Title and toolbar
 		$helper->title = $this->displayName;
@@ -460,83 +233,59 @@ class Affilired extends Module
 			)
 		);
 		// Load current value
-		$content_query = AffiliredModel::getContent( $this->selected_store_id, $this->selected_language_id );
 
-		$content_field = ( !empty( $content_query ) )? $content_query['content_text'] : '';
+		$selectedShop = intval(Tools::getValue('affilired_shop_select'));
 
-		$helper->fields_value['content_text'] = $content_field;
+		$content_query = $selectedShop == 0 ? $this -> getMerchantIDMultiStore() : AffiliredModel::getContent( $this->selected_store_id );
 
-		$helper->fields_value['monolanguage'] = Configuration::get($this->monolanguage_content);
-		$helper->fields_value['use_editor'] = $use_text_editor;
-/*
-		$helper->fields_value['headerFiles[]'] = $this->processSelectFilesForMultiselect(
-																AffiliredModel::getFilesInUse( $this->selected_store_id, $this->selected_language_id )
-																);
-*/
-		$helper->fields_value['use_content_wrapper'] = $content_wrapper;
-		$helper->fields_value['content_wrapper_class'] = $content_wrapper_class;
-		$helper->fields_value['content_wrapper_id'] = $content_wrapper_id;
+		$content_field = ( !empty( $content_query ) )? $content_query['merchant_id'] : '';
+
+		$helper->fields_value['merchant_id'] = $content_field;
 
 		if (isset( $this->context ) && isset( $this->context->controller ))
 		{
-			$this->context->controller->addJs($this->_path.'/js/contentbox.js');
-			$this->context->controller->addCss($this->_path.'/css/contentbox.css');
+			$this->context->controller->addJs($this->_path.'/js/backoffice.js');
+			$this->context->controller->addCss($this->_path.'/css/backoffice.css');
 
 		}
 		else
 		{
-			Tools::addJs($this->_path.'/js/contentbox.js');
-			Tools::addCss($this->_path.'/css/contentbox.css');
+			Tools::addJs($this->_path.'/js/backoffice.js');
+			Tools::addCss($this->_path.'/css/backoffice.css');
 
 		}
 		return $this->_html.$helper->generateForm($fields_form);
 	}
 
-	private function filterFiles($files = array(), $accepted_files = array( 'css', 'js' ))
+	private function getMerchantIDMultiStore()
 	{
-		$result = array();
+		// all the stores are selected
+		$affilired_merchant_collection = new PrestashopCollection('AffiliredModel');
+		$inflated_collection = $affilired_merchant_collection -> getAll();
+		
+		$merchant_value = null;
+		$firstShop = true;
+		$value_changed = false;
 
-		$result[] = array( 'name' => 'none' );
-
-		foreach ($files as $file)
-		{
-			if (in_array( $file['extension'], $accepted_files ))
-				$result[] = $file;
+		if (!empty($inflated_collection)) {
+			foreach ($inflated_collection as $affilired_merchant) {
+				if ($firstShop == true) {
+					$firstShop = false;
+					$merchant_value['merchant_id'] = $affilired_merchant -> merchant_id;
+				}
+				else {
+					if ($value_changed == false) {
+						$new_value = $affilired_merchant;
+						if ($new_value['merchant_id'] != $merchant_value['merchant_id']) {
+							$value_changed = true;
+							$merchant_value = null;
+							break;
+						}
+					}
+				}
+			}
 		}
-		return $result;
-	}
-
-	private function processSelectFilesForMultiselect($files_data = array())
-	{
-		if (gettype( $files_data['files'] ) != null)
-			$files_data = $files_data['files'];
-
-		$files_type = gettype( $files_data );
-
-		$files = ( $files_type == 'string' )? Tools::jsonDecode($files_data) : $files_data;
-
-		$result = array();
-
-		if (!empty( $files ))
-		{
-			foreach ($files as $file)
-				$result[] = ( is_object( $file ) )? $file->name : $file['name'];
-		}
-
-		if (empty( $result ))
-			$result[] = 'none';
-
-		return $result;
-	}
-	private function getLanguagesList()
-	{
-		$languages_list = array();
-		$langs = Language::getLanguages(false);
-
-		foreach ($langs as $lang)
-			$languages_list[] = array( 'id_lang' => $lang['id_lang'], 'name' => $lang['name'] );
-
-		return $languages_list;
+		return $merchant_value;
 	}
 
 	private function getShopsList()
@@ -549,68 +298,6 @@ class Affilired extends Module
 		return $shops_list;
 	}
 
-/*
-	private function getFiles()
-	{
-		$tmp_files_info = array();
-
-		$handle = opendir($this->complete_content_files_location);
-
-		while (false !== ($file = readdir($handle)))
-		{
-			if ($file == '.' || $file == '..')
-				continue;
-
-			$tmp_files_info[] = $this->extractFileInfo( $file );
-		}
-		closedir($handle);
-		sort($tmp_files_info);
-
-		return $tmp_files_info;
-	}
-*/
-	private function processFilesList($files_list, $join_by_extension = false)
-	{
-		if (!is_array( $files_list ))
-			return array();
-
-		$data_out = array();
-		foreach ($files_list as $file)
-			$data_out[] = $this->extractFileInfo( $file );
-
-		if (!empty( $join_by_extension ))
-		{
-			$temp_container = array();
-
-			//group by extension
-			foreach ($data_out as $file)
-			{
-				if (empty( $file['extension'] ))
-					continue;
-
-				if (!array_key_exists( $file['extension'], $temp_container ))
-					$temp_container[$file['extension']] = array();
-
-				$temp_container[$file['extension']][$file['name']] = $file;
-			}
-			//create new dataOut
-			$data_out = array();
-			foreach ($temp_container as $files_array)
-				$data_out = array_merge( $data_out, $files_array );
-		}
-
-		return $data_out;
-	}
-
-	private function extractFileInfo($fileName = null)
-	{
-		if (empty( $fileName ))
-			return $fileName;
-
-		$extension = pathinfo( $fileName, PATHINFO_EXTENSION );
-		return array( 'name'=> $fileName, 'extension'=> $extension);
-	}
-
 
 	/**
 	* methods bellow: Added to comply with the prestashop module validation 
@@ -618,24 +305,6 @@ class Affilired extends Module
 	private function emptyTest($value_in)
 	{
 		return empty( $value_in )?true:false;
-	}
-
-	private function hasFile()
-	{
-		if (count($_FILES) <= 0)
-			return false;
-		else
-		{
-			$check_for_file = 'upload_file';
-
-			foreach ($_FILES as $key => $file)
-			{
-				if ($check_for_file == $key && !empty( $file ) && !empty( $file['name'] ) && !empty( $file['type'] ))
-					return true;
-			}
-
-			return false;
-		}
 	}
 }
 
@@ -649,22 +318,19 @@ class AffiliredModel extends ObjectModel
 
 	public static $definition = array(
 		'table' => 'affilired',
-		'primary' => 'file_id',
+		'primary' => 'content_id',
 		'multishop' => true,
-		'multilang' => true,
+		'multilang' => false,
 		'fields' => array(
-			'file_id' =>       array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt', 'required' => true),
-			'file_name' =>    		array('type' => self::TYPE_STRING, 'validate' => 'isGenericName', 'required' => true,'size' => 255),
-			'file_type' =>		    array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt', 'required' => true),
-			'id_store' =>      array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt', 'required' => true)
+			'id_store' =>      array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt', 'required' => true),
+			'merchant_id' =>      array('type' => self::TYPE_INT, 'validate' => 'isUnsignedInt', 'required' => true)
 		),
 	);
 
 	public static function createTables()
 	{
 		//main table for the files
-		return ( /* AffiliredModel::createFilesTable()
-				&& */ AffiliredModel::createContentTable());
+		return (AffiliredModel::createContentTable());
 	}
 
 	public static function dropTables()
@@ -682,53 +348,31 @@ class AffiliredModel extends ObjectModel
 
 		$sql = 'CREATE TABLE IF NOT EXISTS `'._DB_PREFIX_.self::$definition['table'].'`(
 			`content_id` int(10) unsigned NOT NULL auto_increment,
-			`content_text` text NOT NULL,
+			`merchant_id` int(10) NOT NULL,
 			`id_store` int(10) unsigned NOT NULL default \'1\',
-			PRIMARY KEY (`content_id`)
+			PRIMARY KEY (`content_id`), UNIQUE (`id_store`)
 			) ENGINE='._MYSQL_ENGINE_.' DEFAULT CHARSET=utf8';
 
 		return Db::getInstance()->execute($sql);
 	}
 
-	public static function setContent($content_text = null, $id_store = 1 /*, $id_lang = null*/)
+	public static function setContent($merchant_id = null, $id_store = 1 /*, $id_lang = null*/)
 	{
+		TODO: NO SE ESTA GUARDANDO EL MERCHANT_ID
 		//special thanks to MarkOG (http://www.prestashop.com/forums/user/817367-markog/)
-		$content_text = pSQL( $content_text, true );
-		// $id_lang = (int)$id_lang;
+		$merchant_id = pSQL( $merchant_id, true );
 		$id_store = (int)$id_store;
-		$sql = 'INSERT INTO `'._DB_PREFIX_.self::$definition['table'].'` (`content_text`,`id_lang`,`id_store`)
-					VALUES ("'.$content_text.'","'.$id_lang.'","'.$id_store.'")
-					ON DUPLICATE KEY UPDATE `content_text` = "'.$content_text.'"
+		$sql = 'INSERT INTO `'._DB_PREFIX_.self::$definition['table'].'` (`merchant_id`,`id_store`)
+					VALUES ("'.$merchant_id.'","'.$id_store.'")
+					ON DUPLICATE KEY UPDATE `merchant_id` = "'.$merchant_id.'"
 				';
 
 		return Db::getInstance()->execute( $sql );
 	}
 
-	public static function getContent($shop /*, $language*/)
+	public static function getContent($shop)
 	{
-		// $sql = 'SELECT * FROM '._DB_PREFIX_.self::$definition['table'].' WHERE `id_lang` = "'.(int)$language.'" and `id_store`="'.(int)$shop.'"';
 		$sql = 'SELECT * FROM '._DB_PREFIX_.self::$definition['table'].' WHERE `id_store`="'.(int)$shop.'"';
 		return Db::getInstance()->getRow($sql);
-	}
-/*
-	public static function getFilesInUse($id_store = 1, $id_lang = 1)
-	{
-		$sql = 'SELECT * FROM `'._DB_PREFIX_.self::$definition['table'].'_files` where `id_store`='.(int)$id_store.' and `id_lang`='.(int)$id_lang;
-		return Db::getInstance()->getRow($sql);
-	}
-*/
-	public static function setFiles($files_list = null, $id_store = 1, $id_lang = null)
-	{
-		$files_list = Tools::jsonEncode( $files_list );
-		$files = pSQL( $files_list );
-		$id_lang = (int)$id_lang;
-		$id_store = (int)$id_store;
-
-		$sql = 'INSERT INTO `'._DB_PREFIX_.self::$definition['table'].'_files` (`files`,`id_lang`,`id_store`)
-					VALUES ("'.$files.'","'.$id_lang.'","'.$id_store.'")
-					ON DUPLICATE KEY UPDATE `files` = "'.$files.'"
-				';
-
-		return Db::getInstance()->execute( $sql );
 	}
 }

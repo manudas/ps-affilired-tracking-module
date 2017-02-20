@@ -1,7 +1,9 @@
+/*
 .fileContainer{float:left; width:150px; min-height:100px; border:solid 1px #ccc; text-align:center; position:relative; background-color:#FFF; margin:3px; display:block;vertical-align: middle;}
 .fileUrl{position:absolute; top:0px; left:0px; width:22px; cursor:pointer;}
 .fileDelete{position:absolute; top:0px; right:0px; width:22px; cursor:pointer;}
 .fileName{position:absolute; width:100%; bottom:0px; background-color:#eee; color:#555555; overflow: hidden;}
+*/
 .mcClear{ clear: both }
 .mcClearR{ clear: right }
 .top-module-description { padding-left: 0!important; }
