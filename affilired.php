@@ -4,7 +4,7 @@
 *
 *  @author    Manuel José Pulgar Anguita for Affilired SL
 *  @copyright Affilired
-*  @version   0.3
+*  @version   0.8
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  http://affilired.com
 *  http://spindok.com
@@ -22,7 +22,7 @@ class Affilired extends Module
 		$this->name = 'affilired';
 		$this->description = 'We config for you our tracking system in your store!';
 		$this->tab = 'front_office_features';
-		$this->version = '0.3';
+		$this->version = '0.8';
 		$this->author = 'Manuel José Pulgar Anguita';
 		$this->need_instance = 0;
 
@@ -50,18 +50,21 @@ class Affilired extends Module
 			Shop::setContext(Shop::CONTEXT_ALL);
 
 		if (!parent::install() || !$this->registerHook('footer') 
-								|| !$this->registerHook('OrderConfirmation') 
+								|| !$this->registerHook('displayOrderConfirmation') 
 								|| !AffiliredModel::createTables())
 			return false;
 
-		$this->_clearCache('template.tpl');
+		$this->_clearCache('masterTag.tpl');
+		$this->_clearCache('confirmation.tpl');
 
 		return true;
 	}
 
 	public function uninstall()
 	{
-		$this->_clearCache('template.tpl');
+		$this->_clearCache('masterTag.tpl');
+		$this->_clearCache('confirmation.tpl');
+
 		if (!parent::uninstall()
 			|| !AffiliredModel::DropTables())
 		{
@@ -108,12 +111,49 @@ class Affilired extends Module
 		}
 	}
 
-	public function hookOrderConfirmation($params) {
-		// TODO: launch confirmation script revising the prices witchout taxes
-		$order = $params['objOrder'];
-		// array with products with price, quantity (with taxes and without)
-		$products = $order->getProducts();
-		die(var_export($products, true));
+	public function hookDisplayOrderConfirmation($params) {
+		
+		$merchant_querry = AffiliredModel::getContent( $this->selected_store_id );
+
+		$merchant_id = $merchant_querry['merchant_id'];
+
+		if (empty($merchant_id)) {
+			return false;
+		}
+		else {
+
+			// $order = $params['objOrder'];
+			$order = $params['order']; // ps 1.7 compliant
+			if (empty($order)) { 
+				$order = $params['objOrder']; // ps 1.6 and older compliant
+			}
+
+			// array with products with price, quantity (with taxes and without)
+			$products = $order->getProducts();
+
+			// die("<pre>".var_export($order,true));
+
+			$theme_string = "";
+
+			if (!empty($products)){
+				// foreach ($products as $product){
+				$product_indices = array_keys($products);
+				for ($index = 0; $index < count($products); $index++){
+					$original_index = $product_indices[$index];
+					$product = $products[$original_index];
+					$product_ordering = $index + 1;
+					$this->context->smarty->assign(
+						array( 'merchant_id' =>  $merchant_id,
+							   'product' => $product,
+							   'order' => $order,
+							   'product_ordering' => $product_ordering)
+					);
+					$theme_string .= $this->display(__FILE__, 'views/templates/front/confirmation.tpl');
+				}
+			}
+
+			return $theme_string;
+		}
 	}
 
 	public function getContent()
@@ -272,6 +312,7 @@ class Affilired extends Module
 				if ($firstShop == true) {
 					$firstShop = false;
 					$merchant_value['merchant_id'] = $affilired_merchant -> merchant_id;
+					// die("<pre>".var_export($affilired_merchant, true));
 				}
 				else {
 					if ($value_changed == false) {
@@ -315,6 +356,8 @@ class Affilired extends Module
 
 class AffiliredModel extends ObjectModel
 {
+	public $id_store;
+	public $merchant_id;
 
 	public static $definition = array(
 		'table' => 'affilired',
@@ -358,7 +401,6 @@ class AffiliredModel extends ObjectModel
 
 	public static function setContent($merchant_id = null, $id_store = 1 /*, $id_lang = null*/)
 	{
-		TODO: NO SE ESTA GUARDANDO EL MERCHANT_ID
 		//special thanks to MarkOG (http://www.prestashop.com/forums/user/817367-markog/)
 		$merchant_id = pSQL( $merchant_id, true );
 		$id_store = (int)$id_store;
