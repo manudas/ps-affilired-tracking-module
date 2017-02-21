@@ -276,11 +276,20 @@ class Affilired extends Module
 
 		$selectedShop = intval(Tools::getValue('affilired_shop_select'));
 
-		$content_query = $selectedShop == 0 ? $this -> getMerchantIDMultiStore() : AffiliredModel::getContent( $this->selected_store_id );
+		$selected_affilired_obj = AffiliredModel::getContent( $this->selected_store_id );
+
+		$content_query = $selectedShop == 0 ? $this -> getMerchantIDMultiStore() : $selected_affilired_obj;
 
 		$content_field = ( !empty( $content_query ) )? $content_query['merchant_id'] : '';
 
 		$helper->fields_value['merchant_id'] = $content_field;
+
+		foreach ($ps_shop_list as $shop) {
+
+			$current_affilired_obj = AffiliredModel::getContent( $shop['id_shop'] );
+
+			$helper->fields_value['merchant_id_'.$shop['id_shop']] = $current_affilired_obj['merchant_id'];
+		}
 
 		if (isset( $this->context ) && isset( $this->context->controller ))
 		{
@@ -304,23 +313,33 @@ class Affilired extends Module
 		$inflated_collection = $affilired_merchant_collection -> getAll();
 		
 		$merchant_value = null;
-		$firstShop = true;
-		$value_changed = false;
 
-		if (!empty($inflated_collection)) {
-			foreach ($inflated_collection as $affilired_merchant) {
-				if ($firstShop == true) {
-					$firstShop = false;
-					$merchant_value['merchant_id'] = $affilired_merchant -> merchant_id;
-					// die("<pre>".var_export($affilired_merchant, true));
-				}
-				else {
-					if ($value_changed == false) {
-						$new_value = $affilired_merchant;
-						if ($new_value['merchant_id'] != $merchant_value['merchant_id']) {
-							$value_changed = true;
-							$merchant_value = null;
-							break;
+		$shop_list = $this -> getShopsList();
+		$number_of_shops = count($shop_list);
+		$number_of_affilired_trackings = count($inflated_collection);
+		if ($number_of_shops != $number_of_affilired_trackings) {
+			$merchant_value = null;
+		}
+		else {
+			
+			$firstShop = true;
+			$value_changed = false;
+
+			if (!empty($inflated_collection)) {
+				foreach ($inflated_collection as $affilired_merchant) {
+					if ($firstShop == true) {
+						$firstShop = false;
+						$merchant_value['merchant_id'] = $affilired_merchant -> merchant_id;
+						// die("<pre>".var_export($affilired_merchant, true));
+					}
+					else {
+						if ($value_changed == false) {
+							$new_value = $affilired_merchant;
+							if ($new_value['merchant_id'] != $merchant_value['merchant_id']) {
+								$value_changed = true;
+								$merchant_value = null;
+								break;
+							}
 						}
 					}
 				}
