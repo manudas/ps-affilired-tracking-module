@@ -100,7 +100,7 @@ class Affilired extends Module
 			$current_page = $this -> context -> controller -> php_self;
 
 			if ($current_page == 'order-confirmation') { // the confirmation script is being launched
-				// we launch it in hookOrderConfirmation
+				// we launch it in hookDisplayOrderConfirmation
 			}
 			else { // the master tag is launched
 				$this->context->smarty->assign(
