@@ -4,7 +4,7 @@
 *
 *  @author    Manuel José Pulgar Anguita for Affilired SL
 *  @copyright Affilired
-*  @version   0.8
+*  @version   0.9
 *  @license   http://opensource.org/licenses/afl-3.0.php  Academic Free License (AFL 3.0)
 *  http://affilired.com
 *  http://spindok.com
@@ -112,25 +112,6 @@ class Affilired extends Module
 	}
 
 	public function hookDisplayOrderConfirmation($params) {
-		
-
-		// $order = $params['objOrder'];
-		$order = $params['order']; // ps 1.7 compliant
-		if (empty($order)) { 
-			$order = $params['objOrder']; // ps 1.6 and older compliant
-		}
-		if (!empty($this->context->cookie->affilired_last_order_tracked)) {
-			if ($order -> id  == $this->context->cookie->affilired_last_order_tracked) {
-				return "";
-			}
-			else {
-				$this->context->cookie->affilired_last_order_tracked = $order -> id;
-			}
-		}else {
-			$this->context->cookie->affilired_last_order_tracked = $order -> id;
-		}
-
-
 
 		$merchant_querry = AffiliredModel::getContent( $this->selected_store_id );
 
@@ -140,7 +121,12 @@ class Affilired extends Module
 			return false;
 		}
 		else {
-
+			
+			// $order = $params['objOrder'];
+			$order = $params['order']; // ps 1.7 compliant
+			if (empty($order)) { 
+				$order = $params['objOrder']; // ps 1.6 and older compliant
+			}
 			
 
 			// array with products with price, quantity (with taxes and without)
@@ -166,7 +152,7 @@ class Affilired extends Module
 					$theme_string .= $this->display(__FILE__, 'views/templates/front/confirmation.tpl');
 				}
 			}
-
+			
 			return $theme_string;
 		}
 	}
