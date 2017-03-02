@@ -113,6 +113,25 @@ class Affilired extends Module
 
 	public function hookDisplayOrderConfirmation($params) {
 		
+
+		// $order = $params['objOrder'];
+		$order = $params['order']; // ps 1.7 compliant
+		if (empty($order)) { 
+			$order = $params['objOrder']; // ps 1.6 and older compliant
+		}
+		if (!empty($this->context->cookie->affilired_last_order_tracked)) {
+			if ($order -> id  == $this->context->cookie->affilired_last_order_tracked) {
+				return "";
+			}
+			else {
+				$this->context->cookie->affilired_last_order_tracked = $order -> id;
+			}
+		}else {
+			$this->context->cookie->affilired_last_order_tracked = $order -> id;
+		}
+
+
+
 		$merchant_querry = AffiliredModel::getContent( $this->selected_store_id );
 
 		$merchant_id = $merchant_querry['merchant_id'];
@@ -122,11 +141,7 @@ class Affilired extends Module
 		}
 		else {
 
-			// $order = $params['objOrder'];
-			$order = $params['order']; // ps 1.7 compliant
-			if (empty($order)) { 
-				$order = $params['objOrder']; // ps 1.6 and older compliant
-			}
+			
 
 			// array with products with price, quantity (with taxes and without)
 			$products = $order->getProducts();
@@ -171,10 +186,10 @@ class Affilired extends Module
 				$current_merchant_id = Tools::getValue('merchant_id_'.$shop['id_shop']);
 				if (empty($current_merchant_id)) {
 					$affilired_merchant_collection = new PrestashopCollection('AffiliredModel');
-					$affilired_merchant_collection -> where ('id_store' , '=', "'".$shop['id_shop']."'");
+					$affilired_merchant_collection -> where ('id_store' , '=', /*"'".*/$shop['id_shop']/*."'"*/);
 					$hydrated_collection = $affilired_merchant_collection -> getAll();
 					foreach ($hydrated_collection as $affilired_merchant) {
-						$aaffilired_merchant -> delete();
+						$affilired_merchant -> delete();
 					}
 				}
 				else {
@@ -335,7 +350,7 @@ class Affilired extends Module
 					else {
 						if ($value_changed == false) {
 							$new_value = $affilired_merchant;
-							if ($new_value['merchant_id'] != $merchant_value['merchant_id']) {
+							if ($new_value -> merchant_id != $merchant_value['merchant_id']) {
 								$value_changed = true;
 								$merchant_value = null;
 								break;
