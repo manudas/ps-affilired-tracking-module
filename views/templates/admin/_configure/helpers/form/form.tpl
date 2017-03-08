@@ -18,7 +18,7 @@
 
                     <div class="top-module-sub-title">{$input.moduleDescription|escape:html}</div>
 
-                    <div class="top-module-my-name"><a href="http://contentbox.org/?v={$input.moduleVersion|escape:html}">Affilired Tracking {$input.moduleVersion|escape:html}</a></div>
+                    <div class="top-module-my-name"><a href="http://www.affilired.com">Affilired Tracking {$input.moduleVersion|escape:html}</a></div>
                     <div class="">by <a href="http://www.affilired.com">Affilired</a></div>
                 </div>
             </div>

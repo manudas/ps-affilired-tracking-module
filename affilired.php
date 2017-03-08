@@ -310,7 +310,7 @@ class Affilired extends Module
 			Tools::addCss($this->_path.'/css/backoffice.css');
 
 		}
-		return $this->_html.$helper->generateForm($fields_form);
+		return $helper->generateForm($fields_form);
 	}
 
 	private function getMerchantIDMultiStore()
