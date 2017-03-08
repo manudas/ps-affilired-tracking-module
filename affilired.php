@@ -22,7 +22,7 @@ class Affilired extends Module
 		$this->name = 'affilired';
 		$this->description = 'We config for you our tracking system in your store!';
 		$this->tab = 'front_office_features';
-		$this->version = '0.8';
+		$this->version = '1.0';
 		$this->author = 'Manuel José Pulgar Anguita';
 		$this->need_instance = 0;
 
@@ -127,7 +127,8 @@ class Affilired extends Module
 			if (empty($order)) { 
 				$order = $params['objOrder']; // ps 1.6 and older compliant
 			}
-			
+
+			$order_reference = $order -> reference;
 
 			// array with products with price, quantity (with taxes and without)
 			$products = $order->getProducts();
@@ -142,14 +143,19 @@ class Affilired extends Module
 				for ($index = 0; $index < count($products); $index++){
 					$original_index = $product_indices[$index];
 					$product = $products[$original_index];
-					$product_ordering = $index + 1;
-					$this->context->smarty->assign(
-						array( 'merchant_id' =>  $merchant_id,
-							   'product' => $product,
-							   'order' => $order,
-							   'product_ordering' => $product_ordering)
-					);
-					$theme_string .= $this->display(__FILE__, 'views/templates/front/confirmation.tpl');
+					for ($quantity_index = 0; $quantity_index < $product['product_quantity']; $quantity_index++){
+						// $product_ordering = $index + 1;
+						$product_ordering = $index + $quantity_index;
+						$this->context->smarty->assign(
+							array( 'merchant_id' =>  $merchant_id,
+								'product' => $product,
+								'order' => $order,
+								'product_ordering' => $product_ordering,
+								'order_reference' => $order_reference)
+						);
+						$theme_string .= $this->display(__FILE__, 'views/templates/front/confirmation.tpl');
+					}
+
 				}
 			}
 			
